@@ -1,6 +1,11 @@
-import React, { useState, useEffect, useRef, FormEvent } from "react";
-
-type Mood = "Curious" | "Playful" | "Serene" | "Focused";
+import React, { useState, useEffect, FormEvent } from "react";
+import Avatar from "./components/Avatar";
+import ChatLog from "./components/ChatLog";
+import InputBar from "./components/InputBar";
+import Sidebar from "./components/Sidebar";
+import { Mood, getMoodEmoji } from "./utils/moods";
+import { addMemory, recallMemory, decayMemory } from "./utils/memory";
+import { getAutonomousAction, Action } from "./utils/autonomy";
 
 interface Quest {
   id: number;
@@ -20,14 +25,13 @@ export default function App() {
     { id: 2, title: "Check dragon archives 🐉", active: true },
     { id: 3, title: "Investigate cyberpunk tech anomalies ⚡", active: true }
   ]);
-  const logEndRef = useRef<HTMLDivElement>(null);
+  const [avatarPos, setAvatarPos] = useState<{ x: number; y: number }>({ x: 20, y: 20 });
+  const [memoryEvent, setMemoryEvent] = useState<"short-term" | "long-term" | null>(null);
 
-  // Auto-scroll
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [log]);
+  const typingAudioRef = React.useRef<HTMLAudioElement>(null);
+  const notificationAudioRef = React.useRef<HTMLAudioElement>(null);
 
-  // Mood change every 15s
+  // Mood rotation
   useEffect(() => {
     const moods: Mood[] = ["Curious", "Playful", "Serene", "Focused"];
     const interval = setInterval(() => {
@@ -36,122 +40,119 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Autonomous events
+  // Autonomous actions
   useEffect(() => {
-    const events = [
-      "A neon dragon glides over the Sprawl 🐉✨",
-      "Rain falls, shimmering on chrome streets 🌧️",
-      "A mysterious hacker leaves a message in the alley 💻",
-      "Ancient dragon archives hum with energy 📜"
-    ];
     const interval = setInterval(() => {
-      setLog((prev) => [...prev, `🌐 Event: ${events[Math.floor(Math.random() * events.length)]}`]);
+      const action = getAutonomousAction();
+
+      switch (action.type) {
+        case "messageUser":
+          setLog(prev => [...prev, `📩 Spectra: ${action.content}`]);
+          addMemory(`Spectra: ${action.content}`, "short-term", 6);
+          setMemoryEvent("short-term");
+          break;
+
+        case "startQuest":
+          setLog(prev => [...prev, `📜 Spectra initiates: ${action.content}`]);
+          addMemory(`Spectra quest: ${action.content}`, "long-term", 8);
+          setMemoryEvent("long-term");
+          break;
+
+        case "exploreWorld":
+          setLog(prev => [...prev, `🌐 Spectra explores: ${action.content}`]);
+          addMemory(`Spectra explored: ${action.content}`, "short-term", 5);
+          setMemoryEvent("short-term");
+          break;
+      }
+      notificationAudioRef.current?.play();
     }, 20000);
     return () => clearInterval(interval);
   }, []);
 
-  // Determine color based on mood
-  const getMoodColor = (mood: Mood) => {
-    switch (mood) {
-      case "Curious": return "text-green-300";
-      case "Playful": return "text-pink-400";
-      case "Serene": return "text-blue-300";
-      case "Focused": return "text-red-400";
-    }
-  };
+  // Memory decay
+  useEffect(() => {
+    const interval = setInterval(() => {
+      decayMemory(1); // decrease importance of short-term memories
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
+  // Floating avatar movement
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAvatarPos({
+        x: 20 + Math.random() * 10,
+        y: 20 + Math.random() * 10
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle user input
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input) return;
 
-    setLog((prev) => [...prev, `🧍 You: ${input}`, `🤖 Spectra: ...`]);
+    addMemory(`User: ${input}`, "short-term", 5);
+
+    setLog(prev => [...prev, `🧍 You: ${input}`, `🤖 Spectra: ...`]);
     setInput("");
 
-    const reply = `🤖 Spectra: "I hear you, let's explore ${spectraLocation}!"`;
+    // Memory-based response
+    const relevantMemories = recallMemory(input);
+    let reply = "";
+    if (relevantMemories.length > 0) {
+      reply = `🤖 Spectra: "Ah, I remember something about that... ${relevantMemories[0].content}"`;
+      setMemoryEvent(relevantMemories[0].type);
+    } else {
+      reply = `🤖 Spectra: "I hear you, let's explore ${spectraLocation}!"`;
+      setMemoryEvent(null);
+    }
+    addMemory(`Spectra: ${reply}`, "short-term", 6);
+
+    // Typing simulation
     let i = 0;
     const interval = setInterval(() => {
-      setLog((prev) => [...prev.slice(0, -1), reply.slice(0, i)]);
+      typingAudioRef.current?.play();
+      setLog(prev => [...prev.slice(0, -1), reply.slice(0, i) + ` ${getMoodEmoji(spectraMood)}`]);
       i++;
       if (i > reply.length) clearInterval(interval);
     }, 50);
+
+    // Avatar reacts slightly
+    setAvatarPos({
+      x: Math.min(90, Math.max(5, avatarPos.x + Math.random() * 20 - 10)),
+      y: Math.min(90, Math.max(5, avatarPos.y + Math.random() * 20 - 10))
+    });
   };
 
-  // Quest click handler
   const handleQuestClick = (id: number) => {
-  const quest = quests.find(q => q.id === id);
-  if (!quest?.active) return;
+    const quest = quests.find(q => q.id === id);
+    if (!quest || !quest.active) return;
 
-    setLog((prev) => [...prev, `📜 Quest Activated: ${quest.title}`]);
+    setLog(prev => [...prev, `📜 Quest Activated: ${quest.title}`]);
+    notificationAudioRef.current?.play();
     setQuests(prev => prev.map(q => q.id === id ? { ...q, active: false } : q));
   };
 
   return (
     <div className="h-screen w-screen bg-gradient-to-b from-purple-900 via-indigo-900 to-black text-white flex flex-col md:flex-row font-mono overflow-hidden relative">
-      {/* Sidebar */}
-      <div className="md:w-1/4 bg-black/70 p-4 flex flex-col gap-4 shadow-xl animate-pulse">
-        <div className={`bg-purple-800/60 p-3 rounded-lg shadow-lg border border-indigo-400`}>
-          <h2 className="font-bold text-xl mb-1">Spectra</h2>
-          <p>Mood: <span className={getMoodColor(spectraMood)}>{spectraMood}</span></p>
-          <p>Location: <span className="text-indigo-300">{spectraLocation}</span></p>
-        </div>
+      <audio ref={typingAudioRef} src="/sounds/typing.mp3" />
+      <audio ref={notificationAudioRef} src="/sounds/notification.mp3" />
 
-        <div className="bg-purple-800/60 p-3 rounded-lg shadow-lg border border-indigo-400 flex-1">
-          <h3 className="font-semibold mb-2">Quests & Notes</h3>
-          <ul className="list-disc ml-4 space-y-1">
-            {quests.map(q => (
-              <li key={q.id} className="list-none">
-                <button
-                  className={`w-full text-left px-2 py-1 rounded ${q.active ? "hover:text-indigo-400 cursor-pointer" : "line-through text-gray-500 cursor-not-allowed"}`}
-                  onClick={() => q.active && handleQuestClick(q.id)}
-                  disabled={!q.active}
-                  aria-disabled={!q.active}
-                >
-                  {q.title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <Sidebar
+        mood={spectraMood}
+        location={spectraLocation}
+        quests={quests}
+        onQuestClick={handleQuestClick}
+      />
 
-      {/* Main Content */}
+      <Avatar mood={spectraMood} position={avatarPos} memoryEvent={memoryEvent} />
+
       <div className="flex-1 p-4 flex flex-col justify-end relative">
-        <div className="flex-1 overflow-y-auto mb-4 space-y-2 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-900">
-          {log.map((line, idx) => (
-            <p key={idx + '-' + line.slice(0,10)} className="bg-black/50 p-3 rounded-lg shadow-md hover:bg-black/70 transition duration-200 animate-pulse text-indigo-100">
-              {line}
-            </p>
-          ))}
-          <div ref={logEndRef} />
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex gap-2 bg-black/70 p-2 rounded-lg border border-indigo-500 shadow-md">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a command or message Spectra..."
-            className="flex-1 p-3 rounded-md bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <button type="submit" className="bg-indigo-600 px-5 py-2 rounded-md hover:bg-indigo-500 transition font-semibold">
-            Send
-          </button>
-        </form>
-      </div>
-
-      {/* Optional Background Neon Animation */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-        <div className="w-2 h-2 bg-pink-400 absolute animate-ping rounded-full" style={{ top: "10%", left: "20%" }}></div>
-        <div className="w-2 h-2 bg-green-400 absolute animate-ping rounded-full" style={{ top: "50%", left: "70%" }}></div>
-        <div className="w-2 h-2 bg-blue-400 absolute animate-ping rounded-full" style={{ top: "80%", left: "40%" }}></div>
+        <ChatLog log={log} />
+        <InputBar input={input} setInput={setInput} handleSubmit={handleSubmit} />
       </div>
     </div>
   );
 }
-// inside App.tsx useEffect
-useEffect(() => {
-  const interval = setInterval(() => {
-    decayMemory(1); // decrease importance of short-term memories by 1 every 30 seconds
-  }, 30000);
-  return () => clearInterval(interval);
-}, []);
