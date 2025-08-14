@@ -148,3 +148,10 @@ export default function App() {
     </div>
   );
 }
+// inside App.tsx useEffect
+useEffect(() => {
+  const interval = setInterval(() => {
+    decayMemory(1); // decrease importance of short-term memories by 1 every 30 seconds
+  }, 30000);
+  return () => clearInterval(interval);
+}, []);
