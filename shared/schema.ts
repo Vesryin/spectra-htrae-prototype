@@ -97,6 +97,8 @@ export const messages = pgTable("messages", {
   content: text("content").notNull(),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   messageType: text("message_type").notNull().default("chat"), // chat, event, system
+  urgency: text("urgency").default("normal"), // low, normal, high, critical
+  externalDelivery: jsonb("external_delivery").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`), // SMS, email, push notification settings
   metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
 });
 
@@ -108,6 +110,47 @@ export const players = pgTable("players", {
   lastSeen: timestamp("last_seen").notNull().defaultNow(),
   relationshipWithSpectra: text("relationship_with_spectra").notNull().default("curious"),
   influenceLevel: integer("influence_level").notNull().default(1), // 1-10, how much they can influence world
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Quests and missions
+export const quests = pgTable("quests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  giver: text("giver").notNull(), // NPC or entity that gave the quest
+  assignee: text("assignee"), // who the quest is assigned to (spectra, player, etc.)
+  status: text("status").notNull().default("active"), // active, completed, failed, abandoned
+  objectives: jsonb("objectives").$type<Array<{
+    id: string;
+    description: string;
+    completed: boolean;
+    progress?: number;
+  }>>().notNull().default(sql`'[]'::jsonb`),
+  rewards: jsonb("rewards").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
+  priority: text("priority").notNull().default("normal"), // low, normal, high, urgent
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Relationships between entities
+export const relationships = pgTable("relationships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entityAId: text("entity_a_id").notNull(),
+  entityBId: text("entity_b_id").notNull(),
+  entityAType: text("entity_a_type").notNull(), // spectra, npc, player
+  entityBType: text("entity_b_type").notNull(),
+  relationshipType: text("relationship_type").notNull(), // friendship, mentorship, rivalry, romantic, etc.
+  strength: integer("strength").notNull().default(50), // 0-100 relationship strength
+  trust: integer("trust").notNull().default(50), // 0-100 trust level
+  lastInteraction: timestamp("last_interaction").notNull().defaultNow(),
+  sharedMemories: jsonb("shared_memories").$type<Array<{
+    id: string;
+    description: string;
+    significance: number;
+    timestamp: string;
+  }>>().notNull().default(sql`'[]'::jsonb`), // shared memories between entities
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

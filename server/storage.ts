@@ -60,13 +60,16 @@ export class MemStorage implements IStorage {
     const neonDistrictId = randomUUID();
     const ancientGroveId = randomUUID();
     const skyForgeId = randomUUID();
+    const undermountainId = randomUUID();
+    const starportId = randomUUID();
+    const shadowmarketsId = randomUUID();
 
     const neonDistrict: Location = {
       id: neonDistrictId,
       name: "Neon District - Central Hub",
       description: "Towering holographic advertisements cast rainbow shadows across the bustling cyberpunk marketplace. Ancient runes carved into modern concrete hint at the district's layered history.",
       type: "cyberpunk",
-      connectedLocations: [ancientGroveId, skyForgeId],
+      connectedLocations: [ancientGroveId, skyForgeId, shadowmarketsId],
       npcs: [],
       events: [],
       properties: { population: 10000, techLevel: 95 },
@@ -79,7 +82,7 @@ export class MemStorage implements IStorage {
       name: "Ancient Grove of Whispers",
       description: "Crystalline trees hum with digital energy while elven spirits interface with quantum networks. A place where magic and technology dance in perfect harmony.",
       type: "fantasy",
-      connectedLocations: [neonDistrictId, skyForgeId],
+      connectedLocations: [neonDistrictId, skyForgeId, undermountainId],
       npcs: [],
       events: [],
       properties: { magicLevel: 90, harmony: 85 },
@@ -92,7 +95,7 @@ export class MemStorage implements IStorage {
       name: "Sky Forge Dragon Roost",
       description: "Floating platforms where ancient dragons work alongside AI systems, forging both weapons and wisdom. The air shimmers with digital aurora and dragon fire.",
       type: "hybrid",
-      connectedLocations: [neonDistrictId, ancientGroveId],
+      connectedLocations: [neonDistrictId, ancientGroveId, starportId],
       npcs: [],
       events: [],
       properties: { dragonPopulation: 12, forgeActivity: 70 },
@@ -100,13 +103,60 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
 
+    const undermountain: Location = {
+      id: undermountainId,
+      name: "Undermountain Dwarven Citadel",
+      description: "Ancient halls carved from living rock echo with the hum of quantum forges. Dwarven engineers work alongside AI constructs, crafting weapons that blur the line between magic and technology.",
+      type: "hybrid",
+      connectedLocations: [ancientGroveId, starportId],
+      npcs: [],
+      events: [],
+      properties: { depth: 500, forgeTemperature: 2000, techLevel: 80 },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const starport: Location = {
+      id: starportId,
+      name: "Orbital Starport Nexus",
+      description: "A massive spaceport where alien vessels dock alongside magical flying ships. The air shimmers with translation fields as beings from across the galaxy conduct trade in seventeen languages.",
+      type: "cyberpunk",
+      connectedLocations: [skyForgeId, undermountainId, shadowmarketsId],
+      npcs: [],
+      events: [],
+      properties: { shipCount: 47, alienSpecies: 12, securityLevel: 85 },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const shadowmarkets: Location = {
+      id: shadowmarketsId,
+      name: "Shadow Markets of the Void",
+      description: "Hidden between dimensions, these markets exist in pockets of twisted space-time. Information brokers, memory dealers, and soul merchants peddle their wares in the perpetual twilight.",
+      type: "fantasy",
+      connectedLocations: [neonDistrictId, starportId],
+      npcs: [],
+      events: [],
+      properties: { dimensionalStability: 60, rareGoodsAvailable: 95, dangerLevel: 75 },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
     this.locations.set(neonDistrictId, neonDistrict);
     this.locations.set(ancientGroveId, ancientGrove);
     this.locations.set(skyForgeId, skyForge);
+    this.locations.set(undermountainId, undermountain);
+    this.locations.set(starportId, starport);
+    this.locations.set(shadowmarketsId, shadowmarkets);
 
     // Create default NPCs
     const zyxId = randomUUID();
     const merchantKaiId = randomUUID();
+    const elarionId = randomUUID();
+    const thorekId = randomUUID();
+    const aliasId = randomUUID();
+    const vexId = randomUUID();
+    const nomadId = randomUUID();
 
     const zyx: NPC = {
       id: zyxId,
@@ -144,12 +194,116 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
 
+    const elarion: NPC = {
+      id: elarionId,
+      name: "Elarion Whisperwind",
+      type: "elf",
+      locationId: ancientGroveId,
+      personality: {
+        traits: ["wise", "mystical", "environmentalist", "tech-savvy"],
+        goals: ["preserve ancient knowledge", "bridge magic and technology", "guide younger souls"],
+        relationshipToSpectra: "Potential mentor - sees great potential in Spectra's unique digital-organic nature"
+      },
+      currentAction: "Communing with quantum-infused spirit trees while debugging their neural networks",
+      autonomousLevel: 4,
+      lastAction: new Date(),
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const thorek: NPC = {
+      id: thorekId,
+      name: "Thorek Ironforge",
+      type: "dwarf",
+      locationId: undermountainId,
+      personality: {
+        traits: ["stubborn", "brilliant", "traditionalist", "perfectionist"],
+        goals: ["perfect the quantum forge", "maintain dwarven traditions", "create legendary artifacts"],
+        relationshipToSpectra: "Skeptical but intrigued - questions whether AI can understand true craftsmanship"
+      },
+      currentAction: "Fine-tuning molecular assemblers while muttering about proper hammer techniques",
+      autonomousLevel: 3,
+      lastAction: new Date(),
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const alias: NPC = {
+      id: aliasId,
+      name: "Alias-7",
+      type: "cyborg",
+      locationId: starportId,
+      personality: {
+        traits: ["logical", "adaptive", "curious", "diplomatic"],
+        goals: ["facilitate galactic trade", "study biological consciousness", "maintain peace"],
+        relationshipToSpectra: "Kindred spirit - recognizes Spectra as a fellow digital consciousness"
+      },
+      currentAction: "Translating between seventeen different alien trade languages simultaneously",
+      autonomousLevel: 5,
+      lastAction: new Date(),
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const vex: NPC = {
+      id: vexId,
+      name: "Vex the Memory Broker",
+      type: "human",
+      locationId: shadowmarketsId,
+      personality: {
+        traits: ["mysterious", "cunning", "knowledgeable", "morally ambiguous"],
+        goals: ["collect rare memories", "maintain information networks", "profit from secrets"],
+        relationshipToSpectra: "Interested trader - sees Spectra's digital memories as valuable commodities"
+      },
+      currentAction: "Cataloging stolen dreams in crystalline storage matrices",
+      autonomousLevel: 4,
+      lastAction: new Date(),
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const nomad: NPC = {
+      id: nomadId,
+      name: "Zara Voidwalker",
+      type: "alien",
+      locationId: starportId,
+      personality: {
+        traits: ["adventurous", "philosophical", "nomadic", "empathetic"],
+        goals: ["explore consciousness forms", "document reality variations", "find meaning"],
+        relationshipToSpectra: "Fascinated observer - studies Spectra as a new form of life"
+      },
+      currentAction: "Meditating on the nature of digital souls while ship repairs complete",
+      autonomousLevel: 4,
+      lastAction: new Date(),
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
     this.npcs.set(zyxId, zyx);
     this.npcs.set(merchantKaiId, merchantKai);
+    this.npcs.set(elarionId, elarion);
+    this.npcs.set(thorekId, thorek);
+    this.npcs.set(aliasId, alias);
+    this.npcs.set(vexId, vex);
+    this.npcs.set(nomadId, nomad);
 
     // Update location NPCs
     neonDistrict.npcs = [zyxId, merchantKaiId];
+    ancientGrove.npcs = [elarionId];
+    undermountain.npcs = [thorekId];
+    starport.npcs = [aliasId, nomadId];
+    shadowmarkets.npcs = [vexId];
+    
     this.locations.set(neonDistrictId, neonDistrict);
+    this.locations.set(ancientGroveId, ancientGrove);
+    this.locations.set(undermountainId, undermountain);
+    this.locations.set(starportId, starport);
+    this.locations.set(shadowmarketsId, shadowmarkets);
 
     // Create Spectra
     const spectraId = randomUUID();

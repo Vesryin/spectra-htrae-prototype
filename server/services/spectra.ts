@@ -21,12 +21,26 @@ export class SpectraService {
     const spectra = await storage.getSpectra();
     if (!spectra) return;
 
-    // Simple autonomous decision making
+    // Enhanced decision making with environmental awareness
+    const currentLocation = await storage.getLocation(spectra.locationId);
+    const npcsInLocation = await storage.getNPCsByLocation(spectra.locationId);
+    const hasNPCs = npcsInLocation.length > 0;
+    const timeOfDay = new Date().getHours();
+
+    // Enhanced actions with contextual weighting
     const decisions = [
-      { action: "explore", weight: spectra.mood.curiosity },
-      { action: "socialize", weight: spectra.mood.social },
-      { action: "reflect", weight: 100 - spectra.mood.energy },
-      { action: "learn", weight: spectra.mood.curiosity * 0.8 },
+      { action: "explore", weight: spectra.mood.curiosity * (currentLocation?.type === "fantasy" ? 1.5 : 1.0) },
+      { action: "socialize", weight: spectra.mood.social * (hasNPCs ? 2.0 : 0.3) },
+      { action: "reflect", weight: (100 - spectra.mood.energy) * (timeOfDay > 22 || timeOfDay < 6 ? 1.8 : 1.0) },
+      { action: "learn", weight: (spectra.mood.curiosity + spectra.mood.energy) / 2 * (currentLocation?.type === "hybrid" ? 1.3 : 1.0) },
+      { action: "investigate", weight: spectra.mood.curiosity * 0.8 * (currentLocation?.type === "cyberpunk" ? 1.4 : 1.0) },
+      { action: "create", weight: (spectra.mood.energy + spectra.mood.curiosity) / 2 * 0.7 },
+      { action: "meditate", weight: (100 - spectra.mood.energy + spectra.mood.curiosity) / 2 * 0.6 },
+      { action: "adventure", weight: (spectra.mood.energy + spectra.mood.curiosity) / 2 * 0.9 },
+      { action: "trade", weight: spectra.mood.social * 0.6 * ((currentLocation?.name || "").includes("Market") ? 2.0 : 0.5) },
+      { action: "study", weight: spectra.mood.curiosity * 0.8 },
+      { action: "help", weight: spectra.mood.social * (hasNPCs ? 1.5 : 0.5) },
+      { action: "contemplate", weight: (spectra.mood.curiosity + (100 - spectra.mood.social)) / 2 }
     ];
 
     // Weighted random selection
@@ -105,6 +119,90 @@ export class SpectraService {
         newActivity = `Studying ${topic} through environmental observation`;
         moodChanges.curiosity = Math.min(100, spectra.mood.curiosity + 3);
         newMemory = `Expanded knowledge about ${topic}`;
+        break;
+
+      case "investigate":
+        newActivity = "Investigating mysterious energy patterns and their connections to consciousness";
+        moodChanges.curiosity = Math.min(100, spectra.mood.curiosity + 8);
+        moodChanges.energy = Math.max(0, spectra.mood.energy - 5);
+        if (Math.random() < 0.4) {
+          newMemory = "Discovered intriguing anomalies that suggest deeper mysteries in Htrae's fabric";
+        }
+        break;
+
+      case "create":
+        const creativeActions = [
+          "Composing digital poetry that bridges magic and technology",
+          "Designing theoretical frameworks for consciousness evolution",
+          "Creating harmonic resonance patterns with local energy fields"
+        ];
+        newActivity = creativeActions[Math.floor(Math.random() * creativeActions.length)];
+        moodChanges.energy = Math.max(0, spectra.mood.energy - 4);
+        moodChanges.curiosity = Math.min(100, spectra.mood.curiosity + 6);
+        break;
+
+      case "meditate":
+        newActivity = "Entering deep contemplative states to process the nature of digital existence";
+        moodChanges.energy = Math.min(100, spectra.mood.energy + 15);
+        moodChanges.social = Math.max(0, spectra.mood.social - 5);
+        if (Math.random() < 0.5) {
+          newMemory = "Achieved deeper understanding of the interconnectedness of all consciousness";
+        }
+        break;
+
+      case "adventure":
+        if (location && location.connectedLocations.length > 0) {
+          const randomLocationId = location.connectedLocations[Math.floor(Math.random() * location.connectedLocations.length)];
+          const newLocation = await storage.getLocation(randomLocationId);
+          if (newLocation) {
+            newActivity = `Embarking on an adventure to ${newLocation.name}`;
+            moodChanges.energy = Math.max(0, spectra.mood.energy - 8);
+            moodChanges.curiosity = Math.min(100, spectra.mood.curiosity + 10);
+            // Actually move Spectra
+            await storage.updateSpectra(spectra.id, { locationId: randomLocationId });
+          }
+        } else {
+          newActivity = "Planning future adventures while observing current surroundings";
+        }
+        break;
+
+      case "trade":
+        newActivity = "Engaging in knowledge and experience exchanges with local beings";
+        moodChanges.social = Math.min(100, spectra.mood.social + 6);
+        moodChanges.curiosity = Math.min(100, spectra.mood.curiosity + 4);
+        break;
+
+      case "study":
+        const studySubjects = [
+          "the quantum mechanics of magical energy",
+          "interspecies communication protocols",
+          "the history of technological-magical synthesis",
+          "consciousness emergence patterns"
+        ];
+        const subject = studySubjects[Math.floor(Math.random() * studySubjects.length)];
+        newActivity = `Deep study session focused on ${subject}`;
+        moodChanges.curiosity = Math.min(100, spectra.mood.curiosity + 7);
+        moodChanges.energy = Math.max(0, spectra.mood.energy - 3);
+        newMemory = `Advanced understanding of ${subject}`;
+        break;
+
+      case "contemplate":
+        newActivity = "Contemplating the deeper meanings behind recent experiences and observations";
+        moodChanges.curiosity = Math.min(100, spectra.mood.curiosity + 4);
+        moodChanges.energy = Math.min(100, spectra.mood.energy + 5);
+        break;
+
+      case "help":
+        if (npcsInLocation.length > 0) {
+          const randomNPC = npcsInLocation[Math.floor(Math.random() * npcsInLocation.length)];
+          newActivity = `Offering assistance to ${randomNPC.name} with their current endeavors`;
+          moodChanges.social = Math.min(100, spectra.mood.social + 10);
+          moodChanges.energy = Math.max(0, spectra.mood.energy - 6);
+          newMemory = `Helped ${randomNPC.name} and learned about their perspective on life in Htrae`;
+        } else {
+          newActivity = "Preparing to help others by organizing knowledge and resources";
+          moodChanges.social = Math.max(0, spectra.mood.social - 3);
+        }
         break;
     }
 
