@@ -5,11 +5,12 @@ import { storage } from "./storage";
 import { SpectraService } from "./services/spectra";
 import { WorldService } from "./services/world";
 import { WebSocketService } from "./services/websocket";
+import { addMemory, recallMemory } from "../../client/src/utils/memory"; // adjust path if needed
 
 let simulationInterval: NodeJS.Timeout | null = null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // API Routes
+  // Existing API routes
   app.get("/api/spectra", async (req, res) => {
     try {
       const spectra = await storage.getSpectra();
@@ -39,38 +40,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // -----------------------------
+  // NEW: /api/chat endpoint
+  // -----------------------------
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { message } = req.body;
+      if (!message) return res.status(400).json({ error: "No message provided" });
+
+      // Save user input
+      addMemory(`User: ${message}`, "short-term", 5);
+
+      // Retrieve memory context
+      const memories = recallMemory(message);
+
+      let reply: string;
+      if (memories.length > 0) {
+        reply = `Ah, I remember: ${memories[0].content}`;
+        addMemory(`Spectra: ${reply}`, "short-term", 6);
+      } else {
+        // Optionally use SpectraService for dynamic response
+        const spectraService = SpectraService.getInstance();
+        const dynamicReply = await spectraService.generateReply(message); // make sure this exists
+        reply = dynamicReply || "I hear you! Let's explore the Sprawl.";
+        addMemory(`Spectra: ${reply}`, "short-term", 6);
+      }
+
+      res.json({ reply });
+    } catch (error) {
+      console.error("Chat error:", error);
+      res.status(500).json({ error: "Failed to process chat" });
+    }
+  });
+
+  // Existing simulation routes
   app.post("/api/simulation/start", async (req, res) => {
     try {
-      if (simulationInterval) {
-        clearInterval(simulationInterval);
-      }
+      if (simulationInterval) clearInterval(simulationInterval);
 
       const spectraService = SpectraService.getInstance();
       const worldService = WorldService.getInstance();
       const wsService = WebSocketService.getInstance();
 
-      // Start the simulation loop
       simulationInterval = setInterval(async () => {
         try {
-          // Spectra makes autonomous decisions every 30 seconds
           await spectraService.makeAutonomousDecision();
-          
-          // World simulation tick every 30 seconds
           await worldService.simulationTick();
-          
-          // Broadcast updates to all connected clients
           wsService.broadcastWorldUpdate();
         } catch (error) {
           console.error("Error in simulation loop:", error);
         }
-      }, 30000); // 30 seconds
+      }, 30000);
 
-      // Update world state to active
       const worldState = await storage.getWorldState();
       if (worldState) {
-        await storage.updateWorldState(worldState.id, {
-          simulationActive: true,
-        });
+        await storage.updateWorldState(worldState.id, { simulationActive: true });
       }
 
       res.json({ success: true, message: "Simulation started" });
@@ -86,12 +110,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         simulationInterval = null;
       }
 
-      // Update world state to inactive
       const worldState = await storage.getWorldState();
       if (worldState) {
-        await storage.updateWorldState(worldState.id, {
-          simulationActive: false,
-        });
+        await storage.updateWorldState(worldState.id, { simulationActive: false });
       }
 
       res.json({ success: true, message: "Simulation stopped" });
@@ -100,18 +121,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create HTTP server
+  // HTTP + WebSocket server setup
   const httpServer = createServer(app);
-
-  // Setup WebSocket server with specific path to avoid conflicts with Vite HMR
-  const wss = new WebSocketServer({ 
-    server: httpServer, 
-    path: '/ws/simulation' 
-  });
+  const wss = new WebSocketServer({ server: httpServer, path: "/ws/simulation" });
   const wsService = WebSocketService.getInstance();
 
-  wss.on('connection', (ws) => {
-    console.log('New WebSocket connection established');
+  wss.on("connection", (ws) => {
+    console.log("New WebSocket connection established");
     wsService.addClient(ws);
   });
 
@@ -135,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to auto-start simulation:", error);
     }
-  }, 5000); // Start after 5 seconds
+  }, 5000);
 
   return httpServer;
 }
