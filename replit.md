@@ -65,3 +65,9 @@ Preferred communication style: Simple, everyday language.
 - **Google Fonts**: Orbitron and Space Mono fonts for cyberpunk aesthetic
 - **Custom CSS Variables**: Extensive color system for cyberpunk theme with neon effects
 - **PostCSS**: CSS processing with Tailwind and Autoprefixer plugins
+
+# Deployment URLs
+
+- **Vercel (Frontend/SSR)**: https://spectra-htrae-prototype.vercel.app
+- **Railway (Public Backend)**: https://spectra-htrae-prototype-production.up.railway.app
+- **Railway (Private Backend)**: spectra-htrae-prototype.railway.internal
