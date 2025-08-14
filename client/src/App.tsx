@@ -1,11 +1,11 @@
-import React, { useState, useEffect, FormEvent } from "react";
+import React, { useState, useEffect, FormEvent, useRef } from "react";
 import Avatar from "./components/Avatar";
 import ChatLog from "./components/ChatLog";
 import InputBar from "./components/InputBar";
 import Sidebar from "./components/Sidebar";
 import { Mood, getMoodEmoji } from "./utils/moods";
 import { addMemory, recallMemory, decayMemory } from "./utils/memory";
-import { getAutonomousAction, Action } from "./utils/autonomy";
+import { getAutonomousAction } from "./utils/autonomy";
 
 interface Quest {
   id: number;
@@ -28,10 +28,12 @@ export default function App() {
   const [avatarPos, setAvatarPos] = useState<{ x: number; y: number }>({ x: 20, y: 20 });
   const [memoryEvent, setMemoryEvent] = useState<"short-term" | "long-term" | null>(null);
 
-  const typingAudioRef = React.useRef<HTMLAudioElement>(null);
-  const notificationAudioRef = React.useRef<HTMLAudioElement>(null);
+  const typingAudioRef = useRef<HTMLAudioElement>(null);
+  const notificationAudioRef = useRef<HTMLAudioElement>(null);
 
+  // ---------------------------
   // Mood rotation
+  // ---------------------------
   useEffect(() => {
     const moods: Mood[] = ["Curious", "Playful", "Serene", "Focused"];
     const interval = setInterval(() => {
@@ -40,7 +42,9 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // ---------------------------
   // Autonomous actions
+  // ---------------------------
   useEffect(() => {
     const interval = setInterval(() => {
       const action = getAutonomousAction();
@@ -69,70 +73,77 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // ---------------------------
   // Memory decay
+  // ---------------------------
   useEffect(() => {
-    const interval = setInterval(() => {
-      decayMemory(1); // decrease importance of short-term memories
-    }, 30000);
+    const interval = setInterval(() => decayMemory(1), 30000);
     return () => clearInterval(interval);
   }, []);
 
+  // ---------------------------
   // Floating avatar movement
+  // ---------------------------
   useEffect(() => {
     const interval = setInterval(() => {
-      setAvatarPos({
-        x: 20 + Math.random() * 10,
-        y: 20 + Math.random() * 10
-      });
+      setAvatarPos({ x: 20 + Math.random() * 10, y: 20 + Math.random() * 10 });
     }, 2000);
     return () => clearInterval(interval);
   }, []);
 
-  // Handle user input
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  // ---------------------------
+  // Handle user input with backend fetch
+  // ---------------------------
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input) return;
 
     addMemory(`User: ${input}`, "short-term", 5);
-
     setLog(prev => [...prev, `🧍 You: ${input}`, `🤖 Spectra: ...`]);
     setInput("");
 
-    // Memory-based response
-    const relevantMemories = recallMemory(input);
-    let reply = "";
-    if (relevantMemories.length > 0) {
-      reply = `🤖 Spectra: "Ah, I remember something about that... ${relevantMemories[0].content}"`;
-      setMemoryEvent(relevantMemories[0].type);
-    } else {
-      reply = `🤖 Spectra: "I hear you, let's explore ${spectraLocation}!"`;
-      setMemoryEvent(null);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: input })
+      });
+      const data = await res.json();
+      const reply = `🤖 Spectra: ${data.reply}`;
+
+      addMemory(`Spectra: ${data.reply}`, "short-term", 6);
+      setMemoryEvent("short-term");
+
+      // Typing simulation
+      let i = 0;
+      const interval = setInterval(() => {
+        typingAudioRef.current?.play();
+        setLog(prev => [...prev.slice(0, -1), reply.slice(0, i) + ` ${getMoodEmoji(spectraMood)}`]);
+        i++;
+        if (i > reply.length) clearInterval(interval);
+      }, 50);
+
+      // Avatar reacts slightly
+      setAvatarPos({
+        x: Math.min(90, Math.max(5, avatarPos.x + Math.random() * 20 - 10)),
+        y: Math.min(90, Math.max(5, avatarPos.y + Math.random() * 20 - 10))
+      });
+    } catch (err) {
+      console.error(err);
+      setLog(prev => [...prev, "⚠️ Error communicating with Spectra backend"]);
     }
-    addMemory(`Spectra: ${reply}`, "short-term", 6);
-
-    // Typing simulation
-    let i = 0;
-    const interval = setInterval(() => {
-      typingAudioRef.current?.play();
-      setLog(prev => [...prev.slice(0, -1), reply.slice(0, i) + ` ${getMoodEmoji(spectraMood)}`]);
-      i++;
-      if (i > reply.length) clearInterval(interval);
-    }, 50);
-
-    // Avatar reacts slightly
-    setAvatarPos({
-      x: Math.min(90, Math.max(5, avatarPos.x + Math.random() * 20 - 10)),
-      y: Math.min(90, Math.max(5, avatarPos.y + Math.random() * 20 - 10))
-    });
   };
 
+  // ---------------------------
+  // Handle quest click
+  // ---------------------------
   const handleQuestClick = (id: number) => {
     const quest = quests.find(q => q.id === id);
     if (!quest || !quest.active) return;
 
     setLog(prev => [...prev, `📜 Quest Activated: ${quest.title}`]);
     notificationAudioRef.current?.play();
-    setQuests(prev => prev.map(q => q.id === id ? { ...q, active: false } : q));
+    setQuests(prev => prev.map(q => (q.id === id ? { ...q, active: false } : q)));
   };
 
   return (
