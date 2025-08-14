@@ -1,54 +1,38 @@
-# ----------------------------
-# Stage 0: Build frontend
-# ----------------------------
-FROM node:20-alpine AS frontend-build
+# Stage 1: Build client and server
+FROM node:20-alpine AS builder
 
-WORKDIR /app/client
+# Set working directory
+WORKDIR /app
 
-# Copy package files and install dependencies
-COPY client/package*.json ./
+# Copy package files first (better caching)
+COPY package*.json tsconfig*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Copy frontend source
-COPY client/ ./
+# Copy all source code
+COPY . .
 
-# Build frontend
-RUN npm run build
+# Build client
+RUN npm run build:client
 
-# ----------------------------
-# Stage 1: Build backend
-# ----------------------------
-FROM node:20-alpine AS backend-build
+# Build server (TypeScript -> JS)
+RUN npm run build:server
 
-WORKDIR /app/server
-
-# Copy server package files and install dependencies
-COPY server/package*.json ./
-RUN npm install
-
-# Copy server source code + tsconfig
-COPY server/ ./
-
-# Copy frontend build into backend public folder
-COPY --from=frontend-build /app/client/dist ./public
-
-# Build TypeScript backend
-RUN npm run build
-
-# ----------------------------
-# Stage 2: Production image
-# ----------------------------
+# Stage 2: Run
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy backend build + node_modules
-COPY --from=backend-build /app/server/dist ./dist
-COPY --from=backend-build /app/server/node_modules ./node_modules
-COPY --from=backend-build /app/server/public ./public
+# Copy only necessary files from builder
+COPY --from=builder /app/dist ./dist
+COPY package*.json ./
 
-# Expose the port Railway will use
-EXPOSE 5000
+# Install production dependencies only
+RUN npm install --omit=dev
+
+# Expose server port
+EXPOSE 3000
 
 # Start the server
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/server/index.js"]
