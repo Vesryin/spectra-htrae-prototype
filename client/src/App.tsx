@@ -78,8 +78,8 @@ export default function App() {
 
   // Quest click handler
   const handleQuestClick = (id: number) => {
-    const quest = quests.find(q => q.id === id);
-    if (!quest || !quest.active) return;
+  const quest = quests.find(q => q.id === id);
+  if (!quest?.active) return;
 
     setLog((prev) => [...prev, `📜 Quest Activated: ${quest.title}`]);
     setQuests(prev => prev.map(q => q.id === id ? { ...q, active: false } : q));
@@ -99,12 +99,15 @@ export default function App() {
           <h3 className="font-semibold mb-2">Quests & Notes</h3>
           <ul className="list-disc ml-4 space-y-1">
             {quests.map(q => (
-              <li
-                key={q.id}
-                className={`cursor-pointer ${q.active ? "hover:text-indigo-400" : "line-through text-gray-500"}`}
-                onClick={() => handleQuestClick(q.id)}
-              >
-                {q.title}
+              <li key={q.id} className="list-none">
+                <button
+                  className={`w-full text-left px-2 py-1 rounded ${q.active ? "hover:text-indigo-400 cursor-pointer" : "line-through text-gray-500 cursor-not-allowed"}`}
+                  onClick={() => q.active && handleQuestClick(q.id)}
+                  disabled={!q.active}
+                  aria-disabled={!q.active}
+                >
+                  {q.title}
+                </button>
               </li>
             ))}
           </ul>
@@ -115,7 +118,7 @@ export default function App() {
       <div className="flex-1 p-4 flex flex-col justify-end relative">
         <div className="flex-1 overflow-y-auto mb-4 space-y-2 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-900">
           {log.map((line, idx) => (
-            <p key={idx} className="bg-black/50 p-3 rounded-lg shadow-md hover:bg-black/70 transition duration-200 animate-pulse text-indigo-100">
+            <p key={idx + '-' + line.slice(0,10)} className="bg-black/50 p-3 rounded-lg shadow-md hover:bg-black/70 transition duration-200 animate-pulse text-indigo-100">
               {line}
             </p>
           ))}

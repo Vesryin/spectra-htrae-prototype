@@ -1,9 +1,9 @@
 import React, { FormEvent } from "react";
 
 interface InputBarProps {
-  input: string;
-  setInput: (val: string) => void;
-  handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  readonly input: string;
+  readonly setInput: (val: string) => void;
+  readonly handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
 }
 
 export default function InputBar({ input, setInput, handleSubmit }: InputBarProps) {

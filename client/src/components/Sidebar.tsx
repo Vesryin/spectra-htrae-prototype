@@ -8,10 +8,10 @@ interface Quest {
 }
 
 interface SidebarProps {
-  mood: Mood;
-  location: string;
-  quests: Quest[];
-  onQuestClick: (id: number) => void;
+  readonly mood: Mood;
+  readonly location: string;
+  readonly quests: Quest[];
+  readonly onQuestClick: (id: number) => void;
 }
 
 export default function Sidebar({ mood, location, quests, onQuestClick }: SidebarProps) {
@@ -27,12 +27,15 @@ export default function Sidebar({ mood, location, quests, onQuestClick }: Sideba
         <h3 className="font-semibold mb-2">Quests & Notes</h3>
         <ul className="list-disc ml-4 space-y-1">
           {quests.map(q => (
-            <li
-              key={q.id}
-              className={`cursor-pointer ${q.active ? "hover:text-indigo-400" : "line-through text-gray-500"}`}
-              onClick={() => onQuestClick(q.id)}
-            >
-              {q.title}
+            <li key={q.id} className="list-none">
+              <button
+                className={`w-full text-left px-2 py-1 rounded ${q.active ? "hover:text-indigo-400 cursor-pointer" : "line-through text-gray-500 cursor-not-allowed"}`}
+                onClick={() => q.active && onQuestClick(q.id)}
+                disabled={!q.active}
+                aria-disabled={!q.active}
+              >
+                {q.title}
+              </button>
             </li>
           ))}
         </ul>

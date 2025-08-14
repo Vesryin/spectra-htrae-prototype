@@ -2,8 +2,8 @@ import React from "react";
 import { Mood, getMoodColor, getMoodEmoji } from "../utils/moods";
 
 interface AvatarProps {
-  mood: Mood;
-  position: { x: number; y: number };
+  readonly mood: Mood;
+  readonly position: { x: number; y: number };
 }
 
 export default function Avatar({ mood, position }: AvatarProps) {
